@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Visualisasi Neo4j - Popoto.js</title>
+
+    <!-- Google Icon Font -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+
+    <!-- Mapbox CSS (bisa dihapus jika tidak digunakan) -->
+    <link href="https://api.mapbox.com/mapbox-gl-js/v0.44.1/mapbox-gl.css" rel="stylesheet" />
+
+    <!-- Popoto CSS -->
+    <link rel="stylesheet" href="../node_modules/popoto/dist/popoto.min.css" />
+    <link rel="stylesheet" href="../shared.css" />
+
+    <style>
+      body {
+        background-color: #2e3138;
+        font-family: Roboto, Arial, sans-serif;
+        color: white;
+      }
+
+      .map {
+        width: 100%;
+        height: 100vh;
+      }
+
+      .result-title {
+        cursor: pointer;
+        color: #039be5;
+      }
+
+      .mapboxgl-popup-content h3 {
+        background: #91c949;
+        color: #fff;
+        padding: 10px;
+        margin: 0;
+        border-radius: 3px 3px 0 0;
+      }
+
+      .mapboxgl-popup-content div {
+        padding: 10px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="p-collapsible-popoto" class="active">
+      <div class="collapsible-header white-text" style="background-color: #525863">
+        <i class="ppt-icon ppt-icon-logo" style="color: #8bb71a"></i> Graph Query
+      </div>
+      <div class="collapsible-body no-padding" style="height: 700px">
+        <div id="popoto-taxonomy" class="ppt-taxo-nav" style="color: white; width: 280px"></div>
+        <div id="popoto-graph" class="ppt-div-graph"></div>
+      </div>
+
+      <div class="collapsible-header white-text" style="background-color: #525863">
+        <i class="ppt-icon ppt-icon-wrench" style="color: #8bb71a"></i> Query
+      </div>
+      <div class="collapsible-body no-padding">
+        <div id="popoto-cypher" class="ppt-container-cypher center-align"></div>
+      </div>
+
+      <div class="collapsible-header white-text" style="background-color: #525863">
+        <i class="ppt-icon ppt-icon-user-circle-o" style="color: #8bb71a"></i>
+        Results
+        <span id="result-total-count">0</span>
+      </div>
+      <div class="collapsible-body no-padding">
+        <div class="row">
+          <div id="popoto-results" class="col s3 cards-container"></div>
+          <div id="map" class="map col s9"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://api.mapbox.com/mapbox-gl-js/v0.44.1/mapbox-gl.js"></script>
+    <script src="../node_modules/d3/dist/d3.min.js"></script>
+    <script src="../node_modules/neo4j-driver-lite/lib/browser/neo4j-lite-web.min.js"></script>
+    <script src="../node_modules/popoto/dist/popoto.min.js"></script>
+
+    <script>
+      // 🔐 Ganti password dan host sesuai konfigurasi Neo4j lokal atau remote
+      const driver = neo4j.driver(
+        "bolt://localhost:7687",
+        neo4j.auth.basic("neo4j", "12345678")
+      );
+
+      popoto.runner.DRIVER = driver;
+
+      // 🎯 Struktur node sesuai database kamu
+      popoto.provider.node.Provider = {
+        Film: {
+          returnAttributes: ["id_film", "judul", "tahun", "durasi_menit", "nama_genre"],
+          constraintAttribute: "id_film"
+        },
+        Aktor: {
+          returnAttributes: ["nama_aktor", "kebangsaan", "tahun_lahir"],
+          constraintAttribute: "nama_aktor"
+        },
+        Sutradara: {
+          returnAttributes: ["nama_sutradara", "asal"],
+          constraintAttribute: "nama_sutradara"
+        },
+        Negara: {
+          returnAttributes: ["nama_negara"],
+          constraintAttribute: "nama_negara"
+        }
+      };
+
+      // 🧾 Label untuk relasi antar node
+      popoto.provider.link.Provider = {
+        getTextValue: function (link) {
+          const labelMap = {
+            ACTED_IN: "bermain di",
+            DIRECTED: "menyutradarai",
+            FROM: "berasal dari"
+          };
+          return labelMap[link.label] || link.label;
+        }
+      };
+
+      popoto.result.RESULTS_PAGE_SIZE = 15;
+      popoto.query.MAX_RESULTS_COUNT = 1000;
+
+      popoto.result.onTotalResultCount(function (count) {
+        document.getElementById("result-total-count").textContent = "(" + count + ")";
+      });
+
+      // 🚀 Start visualisasi dari node Film
+      driver
+        .verifyConnectivity()
+        .then(() => {
+          popoto.start("Film");
+        })
+        .catch((error) => {
+          console.error("Neo4j connection failed:", error);
+          alert("Gagal konek ke Neo4j. Cek kredensial atau server.");
+        });
+    </script>
+  </body>
+</html>
